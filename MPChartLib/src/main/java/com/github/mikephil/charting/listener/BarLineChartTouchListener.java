@@ -4,7 +4,9 @@ import android.annotation.SuppressLint;
 import android.graphics.Matrix;
 import android.graphics.PointF;
 import android.util.Log;
+import android.view.GestureDetector;
 import android.view.MotionEvent;
+import android.view.ScaleGestureDetector;
 import android.view.VelocityTracker;
 import android.view.View;
 import android.view.animation.AnimationUtils;
@@ -74,6 +76,45 @@ public class BarLineChartTouchListener extends ChartTouchListener<BarLineChartBa
      */
     private float mMinScalePointerDistance;
 
+    private GestureDetector gestureDetector;
+    private ScaleGestureDetector scaleGestureDetector;
+
+    private ScaleGestureDetector.SimpleOnScaleGestureListener scaleListener = new ScaleGestureDetector.SimpleOnScaleGestureListener(){
+        @Override
+        public boolean onScale(ScaleGestureDetector detector) {
+            performZoom(detector.getFocusX(), detector.getFocusY(), detector.getCurrentSpanX(), detector.getCurrentSpanY());
+            return true;
+        }
+
+        @Override
+        public boolean onScaleBegin(ScaleGestureDetector detector) {
+            if (super.onScaleBegin(detector)){
+                isScrolling = true;
+                return true;
+            }
+            return false;
+        }
+
+        @Override
+        public void onScaleEnd(ScaleGestureDetector detector) {
+            isScrolling = false;
+            super.onScaleEnd(detector);
+        }
+    };
+
+    private GestureDetector.SimpleOnGestureListener gestureListener = new GestureDetector.SimpleOnGestureListener() {
+
+        @Override
+        public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
+            performDrag(e2, distanceX, distanceY);
+            return true;
+        }
+
+    };
+
+    private boolean isScaling = false;
+    private boolean isScrolling = false;
+
     /**
      * Constructor with initialization parameters.
      *
@@ -90,13 +131,36 @@ public class BarLineChartTouchListener extends ChartTouchListener<BarLineChartBa
         this.mDragTriggerDist = Utils.convertDpToPixel(dragTriggerDistance);
 
         this.mMinScalePointerDistance = Utils.convertDpToPixel(3.5f);
+
+        gestureDetector = new GestureDetector(chart.getContext(), gestureListener);
+        scaleGestureDetector = new ScaleGestureDetector(chart.getContext(), scaleListener);
     }
 
     @SuppressLint("ClickableViewAccessibility")
     @Override
     public boolean onTouch(View v, MotionEvent event) {
 
-        if (mVelocityTracker == null) {
+        boolean handeled = false;
+
+        if (isScaling || scaleGestureDetector.onTouchEvent(event)){
+            scaleGestureDetector.onTouchEvent(event);
+            handeled = true;
+        }
+        else if (gestureDetector.onTouchEvent(event)){
+            saveTouchStart(event);
+            handeled =  true;
+        }
+
+
+
+
+        mMatrix = mChart.getViewPortHandler().refresh(mMatrix, mChart, true);
+
+        return handeled;
+
+
+
+        /*if (mVelocityTracker == null) {
             mVelocityTracker = VelocityTracker.obtain();
         }
         mVelocityTracker.addMovement(event);
@@ -285,7 +349,7 @@ public class BarLineChartTouchListener extends ChartTouchListener<BarLineChartBa
         // perform the transformation, update the chart
         mMatrix = mChart.getViewPortHandler().refresh(mMatrix, mChart, true);
 
-        return true; // indicate event was handled
+        return true; // indicate event was handled*/
     }
 
     /**
@@ -342,7 +406,39 @@ public class BarLineChartTouchListener extends ChartTouchListener<BarLineChartBa
      *
      * @param event
      */
+
+    private void performZoom(float centerX, float centerY, float scaleX, float scaleY){
+        OnChartGestureListener l = mChart.getOnChartGestureListener();
+        MPPointF t = getTrans(centerX, centerY);
+        ViewPortHandler h = mChart.getViewPortHandler();
+
+
+        boolean canZoomMoreX = scaleX < 1 ?
+                h.canZoomOutMoreX() :
+                h.canZoomInMoreX();
+
+        boolean canZoomMoreY = scaleY < 1 ?
+                h.canZoomOutMoreY() :
+                h.canZoomInMoreY();
+
+        scaleX = (mChart.isScaleXEnabled()) ? scaleX : 1f;
+        scaleY = (mChart.isScaleYEnabled()) ? scaleY : 1f;
+
+        if (canZoomMoreY || canZoomMoreX) {
+
+            mMatrix.set(mSavedMatrix);
+            mMatrix.postScale(scaleX, scaleY, t.x, t.y);
+
+            if (l != null){
+                // l.onChartScale(MotionEvent, scaleX, scaleY);
+            }
+
+        }
+    }
+
     private void performZoom(MotionEvent event) {
+
+
 
         if (event.getPointerCount() >= 2) { // two finger zoom
 

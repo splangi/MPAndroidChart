@@ -5,10 +5,10 @@ apply plugin: 'maven'
 
 android {
     compileSdkVersion 27
-    buildToolsVersion '26.0.2'
+    buildToolsVersion '27.0.2'
     // resourcePrefix 'mpcht'
     defaultConfig {
-        minSdkVersion 9
+        minSdkVersion 14
         targetSdkVersion 27
         versionCode 3
         versionName '3.0.3'
