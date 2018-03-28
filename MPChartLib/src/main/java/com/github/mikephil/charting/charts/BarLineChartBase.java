@@ -13,6 +13,7 @@ import android.graphics.RectF;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
+import android.widget.Scroller;
 
 import com.github.mikephil.charting.components.XAxis.XAxisPosition;
 import com.github.mikephil.charting.components.YAxis;
@@ -566,7 +567,6 @@ public abstract class BarLineChartBase<T extends BarLineScatterCandleBubbleData<
 
     @Override
     public void computeScroll() {
-
         if (mChartTouchListener instanceof BarLineChartTouchListener)
             ((BarLineChartTouchListener) mChartTouchListener).computeScroll();
     }

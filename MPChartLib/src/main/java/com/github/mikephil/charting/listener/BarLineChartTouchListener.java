@@ -3,6 +3,7 @@ package com.github.mikephil.charting.listener;
 import android.annotation.SuppressLint;
 import android.graphics.Matrix;
 import android.graphics.PointF;
+import android.os.Build;
 import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
@@ -82,14 +83,16 @@ public class BarLineChartTouchListener extends ChartTouchListener<BarLineChartBa
     private ScaleGestureDetector.SimpleOnScaleGestureListener scaleListener = new ScaleGestureDetector.SimpleOnScaleGestureListener(){
         @Override
         public boolean onScale(ScaleGestureDetector detector) {
-            performZoom(detector.getFocusX(), detector.getFocusY(), detector.getCurrentSpanX(), detector.getCurrentSpanY());
+            Log.d("TouchListener", "onScale");
+            performZoom(detector.getFocusX(), detector.getFocusY(), detector.getCurrentSpanX() / detector.getPreviousSpanX(), detector.getCurrentSpanY() / detector.getPreviousSpanY());
             return true;
         }
 
         @Override
         public boolean onScaleBegin(ScaleGestureDetector detector) {
             if (super.onScaleBegin(detector)){
-                isScrolling = true;
+                Log.d("TouchListener", "onScaleBegin");
+                isScaling = true;
                 return true;
             }
             return false;
@@ -97,7 +100,8 @@ public class BarLineChartTouchListener extends ChartTouchListener<BarLineChartBa
 
         @Override
         public void onScaleEnd(ScaleGestureDetector detector) {
-            isScrolling = false;
+            isScaling = false;
+            Log.d("TouchListener", "onScaleEnd");
             super.onScaleEnd(detector);
         }
     };
@@ -106,10 +110,64 @@ public class BarLineChartTouchListener extends ChartTouchListener<BarLineChartBa
 
         @Override
         public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
-            performDrag(e2, distanceX, distanceY);
+            Log.d("TouchListener", "onScroll");
+            performDrag(e2, -distanceX, -distanceY);
             return true;
         }
 
+        @Override
+        public boolean onSingleTapUp(MotionEvent e) {
+            Log.d("TouchListener", "onSingleTap");
+            return super.onSingleTapUp(e);
+        }
+
+        @Override
+        public void onLongPress(MotionEvent e) {
+            Log.d("TouchListener", "onLongPress");
+            super.onLongPress(e);
+        }
+
+        @Override
+        public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
+            Log.d("TouchListener", "onFling");
+            return super.onFling(e1, e2, velocityX, velocityY);
+        }
+
+        @Override
+        public void onShowPress(MotionEvent e) {
+            Log.d("TouchListener", "onShowPress");
+            super.onShowPress(e);
+        }
+
+        @Override
+        public boolean onDown(MotionEvent e) {
+            Log.d("TouchListener", "onDown");
+            return super.onDown(e);
+        }
+
+        @Override
+        public boolean onDoubleTap(MotionEvent e) {
+            Log.d("TouchListener", "onDoubleTap");
+            return super.onDoubleTap(e);
+        }
+
+        @Override
+        public boolean onDoubleTapEvent(MotionEvent e) {
+            Log.d("TouchListener", "onDoubleTapEvent");
+            return super.onDoubleTapEvent(e);
+        }
+
+        @Override
+        public boolean onSingleTapConfirmed(MotionEvent e) {
+            Log.d("TouchListener", "onSingleTapConfirmed");
+            return super.onSingleTapConfirmed(e);
+        }
+
+        @Override
+        public boolean onContextClick(MotionEvent e) {
+            Log.d("TouchListener", "onContextClick");
+            return super.onContextClick(e);
+        }
     };
 
     private boolean isScaling = false;
@@ -140,23 +198,18 @@ public class BarLineChartTouchListener extends ChartTouchListener<BarLineChartBa
     @Override
     public boolean onTouch(View v, MotionEvent event) {
 
-        boolean handeled = false;
-
-        if (isScaling || scaleGestureDetector.onTouchEvent(event)){
-            scaleGestureDetector.onTouchEvent(event);
-            handeled = true;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            Log.d("TouchListener", "onTouchEvent " + MotionEvent.actionToString(event.getAction()));
         }
-        else if (gestureDetector.onTouchEvent(event)){
-            saveTouchStart(event);
-            handeled =  true;
-        }
+        //saveTouchStart(event);
 
+        scaleGestureDetector.onTouchEvent(event);
 
-
+        gestureDetector.onTouchEvent(event);
 
         mMatrix = mChart.getViewPortHandler().refresh(mMatrix, mChart, true);
 
-        return handeled;
+        return true;
 
 
 
@@ -380,7 +433,7 @@ public class BarLineChartTouchListener extends ChartTouchListener<BarLineChartBa
 
         mLastGesture = ChartGesture.DRAG;
 
-        mMatrix.set(mSavedMatrix);
+        //mMatrix.set(mSavedMatrix);
 
         OnChartGestureListener l = mChart.getOnChartGestureListener();
 
@@ -408,8 +461,9 @@ public class BarLineChartTouchListener extends ChartTouchListener<BarLineChartBa
      */
 
     private void performZoom(float centerX, float centerY, float scaleX, float scaleY){
+        if (scaleX == 1 && scaleY == 1) return;
         OnChartGestureListener l = mChart.getOnChartGestureListener();
-        MPPointF t = getTrans(centerX, centerY);
+        MPPointF t = getTrans(mTouchPointCenter.x, mTouchPointCenter.y);
         ViewPortHandler h = mChart.getViewPortHandler();
 
 
@@ -426,11 +480,11 @@ public class BarLineChartTouchListener extends ChartTouchListener<BarLineChartBa
 
         if (canZoomMoreY || canZoomMoreX) {
 
-            mMatrix.set(mSavedMatrix);
-            mMatrix.postScale(scaleX, scaleY, t.x, t.y);
+            //mMatrix.set(mSavedMatrix);
+            mMatrix.postScale(scaleX, scaleY, centerX, centerY);
 
             if (l != null){
-                // l.onChartScale(MotionEvent, scaleX, scaleY);
+                //l.onChartScale(MotionEvent, scaleX, scaleY);
             }
 
         }
